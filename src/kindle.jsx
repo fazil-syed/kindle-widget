@@ -144,8 +144,12 @@ const onTapOrDrag = (e) => {
     widget.style.opacity = ""
 
     if (!moved) {
-      // Treat as click → open Kindle, which resumes the last-read book/page.
-      run(`open -a "Kindle"`)
+      // Treat as click → open the Kindle app, which resumes the last-read
+      // book/page at the furthest-read position. Open by bundle id first:
+      // `open -a Kindle` is ambiguous when both the modern app and the old
+      // "Kindle Classic" are installed (stale LaunchServices registrations
+      // can also steal the name after an uninstall).
+      run(`open -b com.amazon.Lassen || open -a "Kindle"`)
       return
     }
 

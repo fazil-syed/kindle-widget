@@ -65,11 +65,11 @@ case "$cmd" in
         print "Widget removed. Cached data remains in $DATA_DIR (delete it manually if you want)."
         ;;
       version)
-        print "kindle widget 0.1.0"
+        print "kindle widget 0.1.1"
         ;;
       *) usage; exit 1 ;;
     esac
     ;;
-  version) print "kindle widget CLI 0.1.0" ;;
+  version) print "kindle widget CLI 0.1.1" ;;
   *) usage; exit 1 ;;
 esac
