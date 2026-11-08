@@ -1,0 +1,75 @@
+#!/bin/zsh
+# kindle — manage the Kindle Reading Progress desktop widget.
+#
+#   kindle widget install     copy the widget into Übersicht and start it
+#   kindle widget start       (re)start Übersicht
+#   kindle widget data        emit the current reading state as JSON
+#   kindle widget uninstall   remove the widget (caches are kept)
+#   kindle widget version     print version
+
+set -u
+SELF="${0:A:h}"          # this script's directory (binary + scripts live here)
+DATA_DIR="$HOME/Library/Application Support/KindleWidget"
+WIDGET_DIR="$HOME/Library/Application Support/Übersicht/widgets"
+APP="/Applications/Übersicht.app"
+
+usage() {
+  cat >&2
+  kindle widget install      copy the widget into Übersicht and start it
+  kindle widget start        (re)start Übersicht
+  kindle widget data         emit the current reading state as JSON
+  kindle widget uninstall    remove the widget (keeps caches)
+  kindle widget version      print version
+USAGE
+}
+
+widget_installed() { [ -d "$APP" ] }
+
+launch_ubersicht() {
+  if pgrep -f "$APP/Contents/MacOS/Übersicht" > /dev/null 2>&1; then
+    return 0
+  fi
+  open -a "Übersicht" 2>/dev/null && return 0
+  # Gatekeeper can veto `open -a` on first run; fall back to direct launch.
+  ( nohup "$APP/Contents/MacOS/Übersicht" > /dev/null 2>&1 & ) && return 0
+  return 1
+}
+
+cmd=${1:-help}
+subcmd=${2:-}
+
+case "$cmd" in
+  widget)
+    case "$subcmd" in
+      install)
+        if ! widget_installed; then
+          print "Übersicht is required. Installing via Homebrew..."
+          brew install --cask ubersicht || { print "-- failed; install Übersicht manually, then re-run: kindle widget install" >&2; exit 1; }
+        fi
+        mkdir -p "$WIDGET_DIR" "$DATA_DIR"
+        sed "s|@KINDLE_HOME@|$SELF|g" "$SELF/kindle.jsx" > "$WIDGET_DIR/kindle.jsx" \
+          || { print "-- failed to write widget" >&2; exit 1; }
+        launch_ubersicht
+        print "Widget installed: ~/Library/Application Support/Übersicht/widgets/kindle.jsx"
+        print "Übersicht started — drag the card to place it; click it to open Kindle."
+        print "Note: enable 'Launch at login' in Übersicht's menu-bar item so it starts on reboot."
+        ;;
+      start)
+        launch_ubersicht && print "Übersicht running" || { print "-- could not start Übersicht" >&2; exit 1; }
+        ;;
+      data)
+        "$SELF/widget-data.sh"
+        ;;
+      uninstall)
+        rm -f "$WIDGET_DIR/kindle.jsx"
+        print "Widget removed. Cached data remains in $DATA_DIR (delete it manually if you want)."
+        ;;
+      version)
+        print "kindle widget 0.1.0"
+        ;;
+      *) usage; exit 1 ;;
+    esac
+    ;;
+  version) print "kindle widget CLI 0.1.0" ;;
+  *) usage; exit 1 ;;
+esac

@@ -1,0 +1,27 @@
+name: build
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build universal2 binary and tarball
+        run: ./build.sh "${GITHUB_REF_NAME#v}"
+
+      - name: Create release and upload tarball
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VER="${GITHUB_REF_NAME#v}"
+          gh release create "$GITHUB_REF_NAME" \
+            --title "kindle-widget $VER" \
+            --notes "Desktop widget showing live Kindle reading progress. See README for setup." \
+            dist/kindle-widget_${VER}_Darwin_all.tar.gz
