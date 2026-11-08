@@ -3,25 +3,32 @@ name: build
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version (without v prefix)"
+        required: true
 
 permissions:
   contents: write
 
 jobs:
   release:
-    runs-on: macos-14
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
 
       - name: Build universal2 binary and tarball
-        run: ./build.sh "${GITHUB_REF_NAME#v}"
+        env:
+          VER: ${{ inputs.version || github.ref_name }}
+        run: ./build.sh "${VER#v}"
 
       - name: Create release and upload tarball
         env:
           GH_TOKEN: ${{ github.token }}
+          VER: ${{ inputs.version || github.ref_name }}
         run: |
-          VER="${GITHUB_REF_NAME#v}"
-          gh release create "$GITHUB_REF_NAME" \
-            --title "kindle-widget $VER" \
+          gh release create "$VER" \
+            --title "kindle-widget ${VER#v}" \
             --notes "Desktop widget showing live Kindle reading progress. See README for setup." \
-            dist/kindle-widget_${VER}_Darwin_all.tar.gz
+            dist/kindle-widget_${VER#v}_Darwin_all.tar.gz || gh release upload "$VER" dist/* --clobber
