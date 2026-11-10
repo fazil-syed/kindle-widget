@@ -51,8 +51,9 @@ case "$cmd" in
           || { print "-- failed to write widget" >&2; exit 1; }
         launch_ubersicht
         print "Widget installed: ~/Library/Application Support/Übersicht/widgets/kindle.jsx"
-        print "Übersicht started — drag the card to place it; click it to open Kindle."
+        print "Übersicht started — drag the card to place it; click it to open Kindle at your last-read page."
         print "Note: enable 'Launch at login' in Übersicht's menu-bar item so it starts on reboot."
+        print "Note: on the first click, macOS may ask to let Übersicht control System Events (Accessibility) — click OK; without it the click still opens the Kindle app, but lands on the library screen."
         ;;
       start)
         launch_ubersicht && print "Übersicht running" || { print "-- could not start Übersicht" >&2; exit 1; }
@@ -65,11 +66,11 @@ case "$cmd" in
         print "Widget removed. Cached data remains in $DATA_DIR (delete it manually if you want)."
         ;;
       version)
-        print "kindle widget 0.1.1"
+        print "kindle widget 0.2.0"
         ;;
       *) usage; exit 1 ;;
     esac
     ;;
-  version) print "kindle widget CLI 0.1.1" ;;
+  version) print "kindle widget CLI 0.2.0" ;;
   *) usage; exit 1 ;;
 esac

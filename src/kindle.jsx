@@ -86,7 +86,6 @@ export const className = `
     overflow: hidden;
     margin-bottom: 6px;
   }
-  }
   .kindle-fill {
     height: 100%;
     background: linear-gradient(90deg, #ff9a3c, #ffb56b);
@@ -110,8 +109,76 @@ export const className = `
 `
 
 // Drag anywhere to reposition (saved, persists). A click without drag
-// opens the Kindle app, which resumes at your furthest-read position.
-const onTapOrDrag = (e) => {
+// opens the last-read book inside the Kindle app (at your furthest-read
+// page), not just the library home screen.
+const openKindle = (title) => {
+  // Open by bundle id first: `open -a Kindle` is ambiguous when both the
+  // modern app and the old "Kindle Classic" are installed (stale
+  // LaunchServices registrations can also steal the name after an uninstall).
+  const base = `open -b com.amazon.Lassen || open -a "Kindle"`
+  const frag = String(title || "").slice(0, 40).trim()
+  if (!frag) { run(base); return }
+  // Then, via macOS Accessibility (System Events), click the book's entry in
+  // the Kindle tab bar / library so the reader opens at the furthest-read
+  // page. Requires the "Accessibility" permission to be granted to whatever
+  // runs the widget (Übersicht). Without it, the app still opens but shows
+  // the library screen. The `>/dev/null 2>&1` keeps a missing permission
+  // from surfacing; the app itself is already open at that point.
+  const q = frag.replace(/'/g, "'\\''")
+  run([
+    base,
+    `KW_FRAGMENT='${q}' osascript - <<'AS' >/dev/null 2>&1`,
+    `set frag to system attribute "KW_FRAGMENT"`,
+    `if frag is "" then return "nofrag"`,
+    `try`,
+    `  tell application "Kindle" to activate`,
+    `end try`,
+    `on findclick(el, frag)`,
+    `  tell application "System Events"`,
+    `    repeat with k in (UI elements of el)`,
+    `      set r to "?"`,
+    `      set d to ""`,
+    `      try`,
+    `        set r to (role of k)`,
+    `      end try`,
+    `      try`,
+    `        set d to (description of k)`,
+    `      end try`,
+    `      if (r is "AXRadioButton" or r is "AXImage") and (d contains frag) then`,
+    `        try`,
+    `          perform action "AXPress" of k`,
+    `          return "clicked"`,
+    `        end try`,
+    `        try`,
+    `          click k`,
+    `          return "clicked"`,
+    `        end try`,
+    `      end if`,
+    `    end repeat`,
+    `    repeat with k in (UI elements of el)`,
+    `      set sub to my findclick(k, frag)`,
+    `      if sub is "clicked" then return "clicked"`,
+    `    end repeat`,
+    `  end tell`,
+    `  return ""`,
+    `end findclick`,
+    `repeat 12 times`,
+    `  tell application "System Events" to tell process "Kindle"`,
+    `    try`,
+    `      if (count of windows) > 0 then`,
+    `        set res to my findclick(window 1, frag)`,
+    `        if res is "clicked" then return "clicked"`,
+    `      end if`,
+    `    end try`,
+    `  end tell`,
+    `  delay 1`,
+    `end repeat`,
+    `return "notfound"`,
+    `AS`,
+  ].join("\n"))
+}
+
+const onTapOrDrag = (e, title) => {
   const widget = e.currentTarget.parentElement
   if (!widget) return
   e.preventDefault()
@@ -144,12 +211,8 @@ const onTapOrDrag = (e) => {
     widget.style.opacity = ""
 
     if (!moved) {
-      // Treat as click → open the Kindle app, which resumes the last-read
-      // book/page at the furthest-read position. Open by bundle id first:
-      // `open -a Kindle` is ambiguous when both the modern app and the old
-      // "Kindle Classic" are installed (stale LaunchServices registrations
-      // can also steal the name after an uninstall).
-      run(`open -b com.amazon.Lassen || open -a "Kindle"`)
+      // Treat as click → open Kindle at the last-read book (see openKindle).
+      openKindle(title)
       return
     }
 
@@ -172,7 +235,7 @@ const onTapOrDrag = (e) => {
 const Book = (b) => {
   const hasPage = b.currentPage != null && b.printPages != null
   return (
-    <div className="kindle-card" onMouseDown={onTapOrDrag}>
+    <div className="kindle-card" onMouseDown={(e) => onTapOrDrag(e, b.title)}>
       <div className="kindle-label">Now Reading · Kindle</div>
       <div className="kindle-title">{b.title}</div>
       <div className="kindle-author">{b.author}</div>

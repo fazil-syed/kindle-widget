@@ -21,7 +21,9 @@ brew install --cask fazil-syed/homebrew-tap/kindle-widget
 kindle widget install
 ```
 
-This installs [Übersicht](https://github.com/felixhageloh/uebersicht) automatically, adds the widget, and starts it. Drag the card to position it (position persists across restarts), click it to open Kindle at your furthest-read page. Enable **Launch at login** in Übersicht's menu-bar item.
+This installs [Übersicht](https://github.com/felixhageloh/uebersicht) automatically, adds the widget, and starts it. Drag the card to position it (position persists across restarts). Clicking it opens the Kindle app **directly inside your last-read book**, at your furthest-read page — not just the library home screen. Enable **Launch at login** in Übersicht's menu-bar item.
+
+> The first click may trigger a macOS prompt asking to allow Übersicht (or your terminal) to control System Events ("Accessibility") — click **OK** so the widget can jump into the book itself. Without that permission, a click still opens the Kindle app, but lands on the library screen.
 
 ## CLI
 
